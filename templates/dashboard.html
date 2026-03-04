@@ -1,0 +1,12 @@
+<h2>Your Study Tasks</h2>
+
+<form method="POST" action="/add-task">
+    <input type="text" name="title" placeholder="Enter new task" required>
+    <button type="submit">Add Task</button>
+</form>
+
+<ul>
+    {% for task in tasks %}
+        <li>{{ task.title }}</li>
+    {% endfor %}
+</ul>
