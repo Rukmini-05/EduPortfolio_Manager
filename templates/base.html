@@ -1,9 +1,9 @@
 <!DOCTYPE html>
 <html>
+
 <head>
     <title>EduPortfolio Manager</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <script src="{{ url_for('static', filename='js/validation.js') }}"></script>
 </head>
 <body>
 
@@ -11,15 +11,10 @@
     <a href="/">Home</a>
     <a href="/dashboard">Dashboard</a>
     <a href="/students">Students</a>
-    <a href="/tasks">Tasks</a>
-    <a href="/contact">Contact</a>
 
-    {% if current_user.is_authenticated %}
-        <a href="/logout">Logout</a>
-    {% else %}
-        <a href="/register">Register</a>
-        <a href="/login">Login</a>
-    {% endif %}
+    <a href="/register">Register</a>
+     <a href="/login">Login</a>
+     <a href="/logout">Logout</a>
 </nav>
 
 <hr>

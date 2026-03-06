@@ -1,12 +1,27 @@
-<h2>Your Study Tasks</h2>
+{% extends "base.html" %}
 
-<form method="POST" action="/add-task">
-    <input type="text" name="title" placeholder="Enter new task" required>
-    <button type="submit">Add Task</button>
-</form>
+{% block content %}
+
+<h1>TEST DASHBOARD</h1>
+
+<div class="card">
+    <h2>Total Students</h2>
+    <p>{{ total_students }}</p>
+</div>
+
+<div class="card">
+    <h2>Total Tasks</h2>
+    <p>{{ total_tasks }}</p>
+</div>
+
+<hr>
+
+<h2>Your Tasks</h2>
 
 <ul>
-    {% for task in tasks %}
-        <li>{{ task.title }}</li>
-    {% endfor %}
+{% for task in tasks %}
+<li>{{ task.title }}</li>
+{% endfor %}
 </ul>
+
+{% endblock %}

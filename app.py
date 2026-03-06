@@ -1,113 +1,188 @@
-from flask import Flask, render_template, redirect, url_for, request, flash
-from flask_login import LoginManager, login_user, logout_user, login_required, current_user
-from werkzeug.security import generate_password_hash, check_password_hash
-from config import Config
-from models import db, User, Task
+from flask import Flask, render_template, request, redirect, url_for, session
+import mysql.connector
 
 app = Flask(__name__)
-app.config.from_object(Config)
+app.secret_key = "supersecretkey"
 
-db.init_app(app)
+# MySQL Connection
+db = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="Rukmini@2005",
+    database="student_management"
+)
 
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = "login"
-
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.get(int(user_id))
-
-@app.route("/")
+# ---------------- HOME ----------------
+@app.route('/')
 def home():
-    return render_template("home.html")
+    return render_template("home.html") 
+
 
 # ---------------- REGISTER ----------------
-@app.route("/register", methods=["GET", "POST"])
+@app.route('/register', methods=["GET", "POST"])
 def register():
     if request.method == "POST":
-        username = request.form["username"]
+        name = request.form["name"]
         email = request.form["email"]
         password = request.form["password"]
 
-        hashed_password = generate_password_hash(password)
+        cursor = db.cursor(dictionary=True)
+        cursor.execute(
+            "INSERT INTO users (name, email, password) VALUES (%s,%s,%s)",
+            (name, email, password)
+        )
+        db.commit()
+        cursor.close()
 
-        new_user = User(username=username, email=email, password=hashed_password)
-        db.session.add(new_user)
-        db.session.commit()
-
-        flash("Registration successful! Please login.")
         return redirect(url_for("login"))
 
     return render_template("register.html")
 
+
 # ---------------- LOGIN ----------------
-@app.route("/login", methods=["GET", "POST"])
+@app.route('/login', methods=["GET", "POST"])
 def login():
+
     if request.method == "POST":
+
         email = request.form["email"]
         password = request.form["password"]
 
-        user = User.query.filter_by(email=email).first()
+        cursor = db.cursor(dictionary=True)
 
-        if user and check_password_hash(user.password, password):
-            login_user(user)
+        cursor.execute(
+            "SELECT * FROM users WHERE email=%s AND password=%s",
+            (email, password)
+        )
+
+        user = cursor.fetchone()
+        cursor.close()
+
+        if user:
+            session["user"] = user["name"]
             return redirect(url_for("dashboard"))
         else:
-            flash("Invalid credentials")
+            return "Invalid Login ❌"
 
     return render_template("login.html")
 
+
 # ---------------- DASHBOARD ----------------
 @app.route('/dashboard')
-@login_required
 def dashboard():
-    tasks = Task.query.filter_by(user_id=current_user.id).all()
-    return render_template('dashboard.html', tasks=tasks)
 
-@app.route('/add-task', methods=['POST'])
-@login_required
-def add_task():
-    title = request.form.get('title')
+    cursor = db.cursor(buffered=True, dictionary=True)
 
-    if title:
-        new_task = Task(title=title, user_id=current_user.id)
-        db.session.add(new_task)
-        db.session.commit()
+    cursor.execute("SELECT COUNT(*) AS total FROM students")
+    total_students = cursor.fetchone()["total"]
 
-    return redirect(url_for('dashboard'))
+    cursor.execute("SELECT COUNT(*) AS total FROM tasks")
+    total_tasks = cursor.fetchone()["total"]
 
-# ---------------- STUDENTS PAGE ----------------
-@app.route("/students", methods=["GET", "POST"])
-@login_required
+    cursor.execute("SELECT * FROM tasks")
+    tasks = cursor.fetchall()
+
+    cursor.close()
+
+    return render_template(
+        "dashboard.html",
+        total_students=total_students,
+        total_tasks=total_tasks,
+        tasks=tasks
+    )
+
+
+# ---------------- STUDENTS ----------------
+@app.route('/students')
 def students():
-    from models import Student
+
+    if "user" not in session:
+        return redirect(url_for("login"))
+
+    cursor = db.cursor(dictionary=True)
+
+    cursor.execute("SELECT * FROM students")
+    students = cursor.fetchall()
+
+    cursor.close()
+
+    return render_template("students.html", students=students)
+
+
+# ---------------- ADD STUDENT ----------------
+@app.route('/add_student', methods=["POST"])
+def add_student():
+
+    name = request.form["name"]
+    course = request.form["course"]
+    age = request.form["age"]
+
+    cursor = db.cursor()
+
+    cursor.execute(
+        "INSERT INTO students (name, course, age) VALUES (%s,%s,%s)",
+        (name, course, age)
+    )
+
+    db.commit()
+    cursor.close()
+
+    return redirect(url_for("students"))
+
+
+# ---------------- EDIT STUDENT ----------------
+@app.route('/edit_student/<int:student_id>', methods=["GET", "POST"])
+def edit_student(student_id):
+
+    cursor = db.cursor(dictionary=True)
 
     if request.method == "POST":
+
         name = request.form["name"]
         course = request.form["course"]
         age = request.form["age"]
 
-        new_student = Student(name=name, course=course, age=age)
-        db.session.add(new_student)
-        db.session.commit()
+        cursor.execute(
+            "UPDATE students SET name=%s, course=%s, age=%s WHERE id=%s",
+            (name, course, age, student_id)
+        )
+
+        db.commit()
+        cursor.close()
 
         return redirect(url_for("students"))
 
-    all_students = Student.query.all()
-    return render_template("students.html", students=all_students)
+    cursor.execute("SELECT * FROM students WHERE id=%s", (student_id,))
+    student = cursor.fetchone()
+
+    cursor.close()
+
+    return render_template("edit_student.html", student=student)
+
+
+# ---------------- DELETE STUDENT ----------------
+@app.route('/delete_student/<int:student_id>')
+def delete_student(student_id):
+
+    cursor = db.cursor()
+
+    cursor.execute("DELETE FROM students WHERE id=%s", (student_id,))
+
+    db.commit()
+    cursor.close()
+
+    return redirect(url_for("students"))
+
 
 # ---------------- LOGOUT ----------------
-@app.route("/logout")
-@login_required
+@app.route('/logout')
 def logout():
-    logout_user()
+
+    session.pop("user", None)
+
     return redirect(url_for("home"))
 
-import os
 
+# ---------------- RUN ----------------
 if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
-
-    port = int(os.environ.get("PORT", 10000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(debug=True)
