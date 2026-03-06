@@ -1,17 +1,17 @@
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-import mysql.connector
+from flask import Flask, render_template, request, redirect, url_for, session
+import sqlite3
 import os
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# MySQL Connection
-db = mysql.connector.connect(
-    host="localhost",
-    user="root",
-    password="Rukmini@2005",
-    database="student_management"
-)
+
+# ---------------- DATABASE ----------------
+def get_db():
+    conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
+    return conn
+
 
 # ---------------- HOME ----------------
 @app.route("/")
@@ -24,29 +24,28 @@ def home():
 def register():
 
     if request.method == "POST":
-
         name = request.form["name"]
         email = request.form["email"]
         password = request.form["password"]
 
-        cursor = db.cursor()
+        conn = get_db()
+        cursor = conn.cursor()
 
         cursor.execute(
-            "INSERT INTO users (name,email,password) VALUES (%s,%s,%s)",
+            "INSERT INTO users (name,email,password) VALUES (?,?,?)",
             (name, email, password)
         )
 
-        db.commit()
-        cursor.close()
+        conn.commit()
+        conn.close()
 
-        flash("Registration Successful")
         return redirect(url_for("login"))
 
     return render_template("register.html")
 
 
 # ---------------- LOGIN ----------------
-@app.route("/login", methods=["GET","POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
 
     if request.method == "POST":
@@ -54,23 +53,22 @@ def login():
         email = request.form["email"]
         password = request.form["password"]
 
-        cursor = db.cursor(dictionary=True)
+        conn = get_db()
+        cursor = conn.cursor()
 
         cursor.execute(
-            "SELECT * FROM users WHERE email=%s AND password=%s",
-            (email,password)
+            "SELECT * FROM users WHERE email=? AND password=?",
+            (email, password)
         )
 
         user = cursor.fetchone()
-        cursor.close()
+        conn.close()
 
         if user:
             session["user"] = user["name"]
             return redirect(url_for("dashboard"))
-
         else:
-            flash("Invalid Login")
-            return redirect(url_for("login"))
+            return "Invalid Login ❌"
 
     return render_template("login.html")
 
@@ -82,18 +80,19 @@ def dashboard():
     if "user" not in session:
         return redirect(url_for("login"))
 
-    cursor = db.cursor(dictionary=True)
+    conn = get_db()
+    cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) AS total FROM students")
-    total_students = cursor.fetchone()["total"]
+    cursor.execute("SELECT COUNT(*) FROM students")
+    total_students = cursor.fetchone()[0]
 
-    cursor.execute("SELECT COUNT(*) AS total FROM tasks")
-    total_tasks = cursor.fetchone()["total"]
+    cursor.execute("SELECT COUNT(*) FROM tasks")
+    total_tasks = cursor.fetchone()[0]
 
     cursor.execute("SELECT * FROM tasks")
     tasks = cursor.fetchall()
 
-    cursor.close()
+    conn.close()
 
     return render_template(
         "dashboard.html",
@@ -110,12 +109,13 @@ def students():
     if "user" not in session:
         return redirect(url_for("login"))
 
-    cursor = db.cursor(dictionary=True)
+    conn = get_db()
+    cursor = conn.cursor()
 
     cursor.execute("SELECT * FROM students")
     students = cursor.fetchall()
 
-    cursor.close()
+    conn.close()
 
     return render_template("students.html", students=students)
 
@@ -128,32 +128,62 @@ def add_student():
     course = request.form["course"]
     age = request.form["age"]
 
-    cursor = db.cursor()
+    conn = get_db()
+    cursor = conn.cursor()
 
     cursor.execute(
-        "INSERT INTO students (name,course,age) VALUES (%s,%s,%s)",
-        (name,course,age)
+        "INSERT INTO students (name,course,age) VALUES (?,?,?)",
+        (name, course, age)
     )
 
-    db.commit()
-    cursor.close()
+    conn.commit()
+    conn.close()
 
     return redirect(url_for("students"))
+
+
+# ---------------- EDIT STUDENT ----------------
+@app.route("/edit_student/<int:student_id>", methods=["GET", "POST"])
+def edit_student(student_id):
+
+    conn = get_db()
+    cursor = conn.cursor()
+
+    if request.method == "POST":
+
+        name = request.form["name"]
+        course = request.form["course"]
+        age = request.form["age"]
+
+        cursor.execute(
+            "UPDATE students SET name=?, course=?, age=? WHERE id=?",
+            (name, course, age, student_id)
+        )
+
+        conn.commit()
+        conn.close()
+
+        return redirect(url_for("students"))
+
+    cursor.execute("SELECT * FROM students WHERE id=?", (student_id,))
+    student = cursor.fetchone()
+
+    conn.close()
+
+    return render_template("edit_student.html", student=student)
 
 
 # ---------------- DELETE STUDENT ----------------
 @app.route("/delete_student/<int:student_id>")
 def delete_student(student_id):
 
-    cursor = db.cursor()
+    conn = get_db()
+    cursor = conn.cursor()
 
-    cursor.execute(
-        "DELETE FROM students WHERE id=%s",
-        (student_id,)
-    )
+    cursor.execute("DELETE FROM students WHERE id=?", (student_id,))
 
-    db.commit()
-    cursor.close()
+    conn.commit()
+    conn.close()
 
     return redirect(url_for("students"))
 
@@ -162,14 +192,14 @@ def delete_student(student_id):
 @app.route("/logout")
 def logout():
 
-    session.pop("user",None)
+    session.pop("user", None)
 
     return redirect(url_for("home"))
 
 
-# ---------------- RUN ----------------
+# ---------------- RUN APP ----------------
 if __name__ == "__main__":
 
-    port = int(os.environ.get("PORT",10000))
+    port = int(os.environ.get("PORT", 5000))
 
-    app.run(host="0.0.0.0",port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
