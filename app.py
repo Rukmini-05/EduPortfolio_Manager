@@ -11,6 +11,30 @@ CORS(app)
 DATABASE = "database.db"
 
 
+# ----------- DATABASE INIT (ADDED) -----------
+def init_db():
+    conn = sqlite3.connect(DATABASE)
+
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE,
+        password TEXT
+    )
+    """)
+
+    conn.execute("""
+    CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        description TEXT
+    )
+    """)
+
+    conn.commit()
+    conn.close()
+
+
 def get_db_connection():
     conn = sqlite3.connect(DATABASE)
     conn.row_factory = sqlite3.Row
@@ -123,6 +147,9 @@ def logout():
     return redirect(url_for("home"))
 
 
-# ---------------- RUN APP ----------------
+# ----------- RUN APP -----------
+
+init_db()   # (ADDED)
+
 if __name__ == "__main__":
     app.run(debug=True)
