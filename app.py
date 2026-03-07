@@ -188,21 +188,31 @@ def delete_student(student_id):
     return redirect(url_for("students"))
 
 
-@app.route('/add_project', methods=['GET', 'POST'])
+@app.route("/add_project", methods=["GET","POST"])
 def add_project():
-    if request.method == 'POST':
-        title = request.form['title']
+
+    if request.method == "POST":
+
+        title = request.form["title"]
+        description = request.form["description"]
+        github = request.form["github_link"]
+        live = request.form["live_link"]
+        tech = request.form["technologies"]
 
         conn = sqlite3.connect("database.db")
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO tasks (title) VALUES (?)", (title,))
+
+        cursor.execute(
+            "INSERT INTO projects (title,description,github_link,live_link,technologies) VALUES (?,?,?,?,?)",
+            (title,description,github,live,tech)
+        )
+
         conn.commit()
         conn.close()
 
-        return redirect('/dashboard')
+        return redirect(url_for("dashboard"))
 
     return render_template("add_project.html")
-
 # ---------------- LOGOUT ----------------
 @app.route("/logout")
 def logout():
