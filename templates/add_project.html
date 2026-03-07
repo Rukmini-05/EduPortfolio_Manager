@@ -1,11 +1,13 @@
 <h2>Add Project</h2>
 
 <form method="POST">
-Title <input name="title"><br>
-Description <input name="description"><br>
-GitHub Link <input name="github"><br>
-Live Link <input name="live"><br>
-Technologies <input name="tech"><br>
+    <input type="text" name="title" placeholder="Project Title" required><br><br>
 
-<button type="submit">Add Project</button>
+    <textarea name="description" placeholder="Project Description"></textarea><br><br>
+
+    <input type="text" name="github_link" placeholder="GitHub Link"><br><br>
+
+    <input type="text" name="live_link" placeholder="Live Demo Link"><br><br>
+
+    <button type="submit">Add Project</button>
 </form>

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect
 import sqlite3
 import os
 
@@ -188,19 +188,29 @@ def delete_student(student_id):
     return redirect(url_for("students"))
 
 
-@app.route("/projects")
-def projects():
+@app.route("/add_project", methods=["GET", "POST"])
+def add_project():
 
-    conn = sqlite3.connect("database.db")
-    conn.row_factory = sqlite3.Row
-    cursor = conn.cursor()
+    if request.method == "POST":
+        title = request.form["title"]
+        description = request.form["description"]
+        github_link = request.form["github_link"]
+        live_link = request.form["live_link"]
 
-    cursor.execute("SELECT * FROM projects")
-    projects = cursor.fetchall()
+        conn = sqlite3.connect("database.db")
+        cursor = conn.cursor()
 
-    conn.close()
+        cursor.execute(
+            "INSERT INTO projects (title, description, github_link, live_link) VALUES (?, ?, ?, ?)",
+            (title, description, github_link, live_link)
+        )
 
-    return render_template("projects.html", projects=projects)
+        conn.commit()
+        conn.close()
+
+        return redirect("/projects")
+
+    return render_template("add_project.html")
 # ---------------- LOGOUT ----------------
 @app.route("/logout")
 def logout():
