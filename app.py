@@ -188,31 +188,19 @@ def delete_student(student_id):
     return redirect(url_for("students"))
 
 
-@app.route("/add_project", methods=["GET","POST"])
-def add_project():
+@app.route("/projects")
+def projects():
 
-    if request.method == "POST":
+    conn = sqlite3.connect("database.db")
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
-        title = request.form["title"]
-        description = request.form["description"]
-        github = request.form["github_link"]
-        live = request.form["live_link"]
-        tech = request.form["technologies"]
+    cursor.execute("SELECT * FROM projects")
+    projects = cursor.fetchall()
 
-        conn = sqlite3.connect("database.db")
-        cursor = conn.cursor()
+    conn.close()
 
-        cursor.execute(
-            "INSERT INTO projects (title,description,github_link,live_link,technologies) VALUES (?,?,?,?,?)",
-            (title,description,github,live,tech)
-        )
-
-        conn.commit()
-        conn.close()
-
-        return redirect(url_for("dashboard"))
-
-    return render_template("add_project.html")
+    return render_template("projects.html", projects=projects)
 # ---------------- LOGOUT ----------------
 @app.route("/logout")
 def logout():
