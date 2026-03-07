@@ -48,10 +48,20 @@ def dashboard():
         return redirect(url_for("home"))
 
     conn = get_db_connection()
-    projects = conn.execute("SELECT * FROM projects").fetchall()
+
+    total_students = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    total_tasks = conn.execute("SELECT COUNT(*) FROM projects").fetchone()[0]
+
+    tasks = conn.execute("SELECT * FROM projects").fetchall()
+
     conn.close()
 
-    return render_template("dashboard.html", projects=projects)
+    return render_template(
+        "dashboard.html",
+        total_students=total_students,
+        total_tasks=total_tasks,
+        tasks=tasks
+    )
 
 
 @app.route("/add_project", methods=["POST"])
@@ -72,6 +82,14 @@ def add_project():
 
     return redirect(url_for("dashboard"))
 
+
+@app.route("/create_user")
+def create_user():
+    conn = get_db_connection()
+    conn.execute("INSERT INTO users (username, password) VALUES (?, ?)", ("admin", "admin123"))
+    conn.commit()
+    conn.close()
+    return "User created"
 
 @app.route("/logout")
 def logout():
