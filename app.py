@@ -1,14 +1,16 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
+import os
 from flask_cors import CORS
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# Allow Netlify frontend
+# Allow frontend requests
 CORS(app)
 
-DATABASE = "database.db"
+# Database path
+DATABASE = os.path.join(os.getcwd(), "database.db")
 
 
 # ---------- DATABASE CONNECTION ----------
@@ -42,7 +44,7 @@ def init_db():
     conn.close()
 
 
-# Run database setup when app starts
+# Run database setup
 init_db()
 
 
@@ -135,7 +137,7 @@ def create_user():
     conn = get_db_connection()
 
     conn.execute(
-        "INSERT INTO users (username, password) VALUES (?, ?)",
+        "INSERT OR IGNORE INTO users (username, password) VALUES (?, ?)",
         ("admin", "admin123")
     )
 
@@ -154,4 +156,5 @@ def logout():
 
 # ---------- RUN ----------
 if __name__ == "__main__":
-    app.run(debug=True)
+    port = int(os.environ.get("PORT", 10000))
+    app.run(host="0.0.0.0", port=port)
