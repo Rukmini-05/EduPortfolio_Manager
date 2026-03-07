@@ -5,7 +5,7 @@ from flask_cors import CORS
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# Allow frontend (Netlify) to communicate with backend (Render)
+# Allow frontend (Netlify) to access backend
 CORS(app)
 
 DATABASE = "database.db"
@@ -40,7 +40,7 @@ def login():
 
     if user:
         session["user"] = username
-        return redirect(url_for("dashboard"))
+        return redirect("https://eduportfolio-manager-8.onrender.com/dashboard")
     else:
         return "Invalid username or password"
 
