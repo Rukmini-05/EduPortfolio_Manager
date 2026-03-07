@@ -5,13 +5,20 @@ from flask_cors import CORS
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# Allow frontend (Netlify) to access backend
+# Allow Netlify frontend
 CORS(app)
 
 DATABASE = "database.db"
 
 
-# ----------- DATABASE INIT (ADDED) -----------
+# ---------- DATABASE CONNECTION ----------
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
+    return conn
+
+
+# ---------- INITIALIZE DATABASE ----------
 def init_db():
     conn = sqlite3.connect(DATABASE)
 
@@ -35,19 +42,17 @@ def init_db():
     conn.close()
 
 
-def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
-    conn.row_factory = sqlite3.Row
-    return conn
+# Run database setup when app starts
+init_db()
 
 
-# ---------------- HOME ----------------
+# ---------- HOME ----------
 @app.route("/")
 def home():
     return render_template("login.html")
 
 
-# ---------------- LOGIN ----------------
+# ---------- LOGIN ----------
 @app.route("/login", methods=["POST"])
 def login():
     username = request.form["username"]
@@ -64,12 +69,12 @@ def login():
 
     if user:
         session["user"] = username
-        return redirect("https://eduportfolio-manager-8.onrender.com/dashboard")
+        return redirect(url_for("dashboard"))
     else:
         return "Invalid username or password"
 
 
-# ---------------- DASHBOARD ----------------
+# ---------- DASHBOARD ----------
 @app.route("/dashboard")
 def dashboard():
 
@@ -100,7 +105,7 @@ def dashboard():
     )
 
 
-# ---------------- ADD PROJECT ----------------
+# ---------- ADD PROJECT ----------
 @app.route("/add_project", methods=["POST"])
 def add_project():
 
@@ -123,37 +128,30 @@ def add_project():
     return redirect(url_for("dashboard"))
 
 
-# ---------------- CREATE ADMIN USER ----------------
+# ---------- CREATE ADMIN USER ----------
 @app.route("/create_user")
 def create_user():
 
     conn = get_db_connection()
 
-    try:
-        conn.execute(
-            "INSERT INTO users (username, password) VALUES (?, ?)",
-            ("admin", "admin123")
-        )
-        conn.commit()
-        message = "Admin user created. Username: admin | Password: admin123"
+    conn.execute(
+        "INSERT INTO users (username, password) VALUES (?, ?)",
+        ("admin", "admin123")
+    )
 
-    except sqlite3.IntegrityError:
-        message = "Admin user already exists. Username: admin | Password: admin123"
-
+    conn.commit()
     conn.close()
 
-    return message
+    return "Admin created: admin / admin123"
 
-# ---------------- LOGOUT ----------------
+
+# ---------- LOGOUT ----------
 @app.route("/logout")
 def logout():
     session.pop("user", None)
     return redirect(url_for("home"))
 
 
-# ----------- RUN APP -----------
-
-init_db()   # (ADDED)
-
+# ---------- RUN ----------
 if __name__ == "__main__":
     app.run(debug=True)
