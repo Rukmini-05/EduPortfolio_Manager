@@ -129,16 +129,20 @@ def create_user():
 
     conn = get_db_connection()
 
-    conn.execute(
-        "INSERT INTO users (username, password) VALUES (?, ?)",
-        ("admin", "admin123")
-    )
+    try:
+        conn.execute(
+            "INSERT INTO users (username, password) VALUES (?, ?)",
+            ("admin", "admin123")
+        )
+        conn.commit()
+        message = "Admin user created. Username: admin | Password: admin123"
 
-    conn.commit()
+    except sqlite3.IntegrityError:
+        message = "Admin user already exists. Username: admin | Password: admin123"
+
     conn.close()
 
-    return "Admin user created. Username: admin | Password: admin123"
-
+    return message
 
 # ---------------- LOGOUT ----------------
 @app.route("/logout")
