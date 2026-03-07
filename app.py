@@ -1,12 +1,11 @@
 from flask import Flask, render_template, request, redirect, url_for, session
 import sqlite3
-import os
 from flask_cors import CORS
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
 
-# Enable CORS so Netlify frontend can talk to Render backend
+# Allow frontend (Netlify) to communicate with backend (Render)
 CORS(app)
 
 DATABASE = "database.db"
@@ -18,21 +17,25 @@ def get_db_connection():
     return conn
 
 
+# ---------------- HOME ----------------
 @app.route("/")
 def home():
     return render_template("login.html")
 
 
+# ---------------- LOGIN ----------------
 @app.route("/login", methods=["POST"])
 def login():
     username = request.form["username"]
     password = request.form["password"]
 
     conn = get_db_connection()
+
     user = conn.execute(
         "SELECT * FROM users WHERE username=? AND password=?",
         (username, password)
     ).fetchone()
+
     conn.close()
 
     if user:
@@ -42,17 +45,26 @@ def login():
         return "Invalid username or password"
 
 
+# ---------------- DASHBOARD ----------------
 @app.route("/dashboard")
 def dashboard():
+
     if "user" not in session:
         return redirect(url_for("home"))
 
     conn = get_db_connection()
 
-    total_students = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
-    total_tasks = conn.execute("SELECT COUNT(*) FROM projects").fetchone()[0]
+    total_students = conn.execute(
+        "SELECT COUNT(*) FROM users"
+    ).fetchone()[0]
 
-    tasks = conn.execute("SELECT * FROM projects").fetchall()
+    total_tasks = conn.execute(
+        "SELECT COUNT(*) FROM projects"
+    ).fetchone()[0]
+
+    tasks = conn.execute(
+        "SELECT * FROM projects"
+    ).fetchall()
 
     conn.close()
 
@@ -64,8 +76,10 @@ def dashboard():
     )
 
 
+# ---------------- ADD PROJECT ----------------
 @app.route("/add_project", methods=["POST"])
 def add_project():
+
     if "user" not in session:
         return redirect(url_for("home"))
 
@@ -73,29 +87,42 @@ def add_project():
     description = request.form["description"]
 
     conn = get_db_connection()
+
     conn.execute(
         "INSERT INTO projects (title, description) VALUES (?, ?)",
         (title, description)
     )
+
     conn.commit()
     conn.close()
 
     return redirect(url_for("dashboard"))
 
 
+# ---------------- CREATE ADMIN USER ----------------
 @app.route("/create_user")
 def create_user():
+
     conn = get_db_connection()
-    conn.execute("INSERT INTO users (username, password) VALUES (?, ?)", ("admin", "admin123"))
+
+    conn.execute(
+        "INSERT INTO users (username, password) VALUES (?, ?)",
+        ("admin", "admin123")
+    )
+
     conn.commit()
     conn.close()
-    return "User created"
 
+    return "Admin user created. Username: admin | Password: admin123"
+
+
+# ---------------- LOGOUT ----------------
 @app.route("/logout")
 def logout():
     session.pop("user", None)
     return redirect(url_for("home"))
 
 
+# ---------------- RUN APP ----------------
 if __name__ == "__main__":
     app.run(debug=True)
