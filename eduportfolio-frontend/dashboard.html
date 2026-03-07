@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Dashboard</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<h1>Dashboard</h1>
+
+<div id="dashboardData"></div>
+
+<script>
+
+fetch("https://eduportfolio-manager-8.onrender.com/dashboard")
+.then(res => res.text())
+.then(data => {
+document.getElementById("dashboardData").innerHTML = data
+})
+
+</script>
+
+</body>
+</html>
